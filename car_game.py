@@ -111,6 +111,7 @@ clock = pygame.time.Clock()
 fps = 120
 running = True
 while running:
+    choice = main_menu(screen)
 
     clock.tick(fps)
 
