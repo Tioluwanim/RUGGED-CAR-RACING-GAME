@@ -9,7 +9,8 @@ def generate_readme(project_path, readme_name="README.md"):
     for root, dirs, files in os.walk(project_path):
         for file in files:
             if file != readme_name:  # Avoid including the README itself
-                file_summary.append(os.path.relpath(os.path.join(root, file), project_path))
+                file_summary.append(os.path.relpath(
+                    os.path.join(root, file), project_path))
 
     # Write README content
     with open(readme_path, "w", encoding="utf-8") as f:

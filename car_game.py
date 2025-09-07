@@ -1,15 +1,30 @@
 import pygame
 from pygame.locals import *
 import random
+from environment import EnvironmentManager, lerp_color, get_random_car
 
 pygame.init()
 
-# create the window
+
+# create the windowp
 width = 500
 height = 500
 screen_size = (width, height)
 screen = pygame.display.set_mode(screen_size)
 pygame.display.set_caption("Car Game")
+
+
+# Mortti X
+# Environment manager
+env_manager = EnvironmentManager(duration=15000)
+
+# update environment
+road_color, current_bg, next_bg, alpha = env_manager.update()
+
+
+# background scroll variables
+bg_y = 0
+
 
 # colors
 gray = (100, 100, 100)
@@ -22,6 +37,8 @@ yellow = (255, 232, 0)
 gameover = False
 speed = 2
 score = 0
+
+last_milestone = 0
 
 # markers size
 marker_width = 10
@@ -56,9 +73,12 @@ class Vehicle(pygame.sprite.Sprite):
         self.rect.center = [x, y]
 
 
+player_car = get_random_car()
+
+
 class PlayerVehicle(Vehicle):
     def __init__(self, x, y):
-        image = pygame.image.load("images/car.png")
+        image = pygame.image.load(f"images/{player_car}")
         super().__init__(image, x, y)
 
 
@@ -72,7 +92,8 @@ player = PlayerVehicle(player_x, player_y)
 player_group.add(player)
 
 # Load the other vehicle images
-image_filenames = ["mini_truck.png", "truck.png", "mini_van.png", "black_viper.png", "police.png"]
+image_filenames = ["Mini_truck.png", "truck.png",
+                   "Mini_van.png", "Black_viper.png", "Police.png"]
 vehicle_images = []
 for image_filename in image_filenames:
     image = pygame.image.load("images/" + image_filename)
@@ -93,6 +114,9 @@ while running:
 
     clock.tick(fps)
 
+    # Update environment every frame - Mortti X
+    road_color, current_bg, next_bg, alpha = env_manager.update()
+
     for event in pygame.event.get():
         if event.type == QUIT:
             running = False
@@ -112,13 +136,15 @@ while running:
                             player.rect.left = vehicle.rect.right
                             crash_rect.center = [
                                 player.rect.left,
-                                (player.rect.center[1] + vehicle.rect.center[1]) / 2,
+                                (player.rect.center[1] +
+                                 vehicle.rect.center[1]) / 2,
                             ]
                         elif event.key == K_RIGHT:
                             player.rect.right = vehicle.rect.left
                             crash_rect.center = [
                                 player.rect.right,
-                                (player.rect.center[1] + vehicle.rect.center[1]) / 2,
+                                (player.rect.center[1] +
+                                 vehicle.rect.center[1]) / 2,
                             ]
 
         else:  # game over screen
@@ -132,23 +158,60 @@ while running:
                 elif event.key == K_n:  # quit
                     running = False
 
-    # draw the grass
-    screen.fill(green)
+    # # draw the grass
+    # screen.fill(green)
 
-    # draw the road
-    pygame.draw.rect(screen, gray, road)
+    # # draw the road
+    # pygame.draw.rect(screen, gray, road)
+
+    # Mortti X code
+    # draw roadside with scrolling background
+    if current_bg:
+        bg_y += speed
+        if bg_y >= height:
+            bg_y = 0
+
+        # draw current background
+        # current background scroll
+        screen.blit(pygame.transform.scale(
+            current_bg, (width, height)), (0, bg_y - height))
+        screen.blit(pygame.transform.scale(
+            current_bg, (width, height)), (0, bg_y))
+
+        # overlay next background with alpha, scroll the same way
+        if next_bg:
+            temp_img = pygame.transform.scale(next_bg, (width, height)).copy()
+            temp_img.set_alpha(alpha)
+            screen.blit(temp_img, (0, bg_y - height))
+            screen.blit(temp_img, (0, bg_y))
+
+    else:
+        screen.fill((34, 139, 34))  # fallback green
+
+    # calculate road color (smooth transition if needed)
+    road_color = env_manager.current_theme["road"]
+
+    if env_manager.next_theme:
+        t = env_manager.transition_alpha / 255  # normalize 0..1
+        road_color = lerp_color(env_manager.current_theme["road"],
+                                env_manager.next_theme["road"], t)
+
+    # draw the road with the computed color
+    pygame.draw.rect(screen, road_color, road)
 
     # draw the edge markers
     pygame.draw.rect(screen, yellow, left_edge_marker)
     pygame.draw.rect(screen, yellow, right_edge_marker)
 
     # draw the lane markers
-    lane_marker_move_y += speed * 2
+    lane_marker_move_y += speed
     if lane_marker_move_y >= marker_height * 2:
         lane_marker_move_y = 0
     for y in range(marker_height * -2, height, marker_height * 2):
-        pygame.draw.rect(screen, white, (left_lane + 45, y + lane_marker_move_y, marker_width, marker_height))
-        pygame.draw.rect(screen, white, (center_lane + 45, y + lane_marker_move_y, marker_width, marker_height))
+        pygame.draw.rect(screen, white, (left_lane + 45, y +
+                         lane_marker_move_y, marker_width, marker_height))
+        pygame.draw.rect(screen, white, (center_lane + 45, y +
+                         lane_marker_move_y, marker_width, marker_height))
 
     # draw the player's car
     player_group.draw(screen)
@@ -172,8 +235,9 @@ while running:
             if vehicle.rect.top >= height:
                 vehicle.kill()
                 score += 1
-                if score > 0 and score % 5 == 0:
-                    speed += 1
+                if score % 5 == 0 and score != last_milestone:
+                    speed += 0.2
+                    last_milestone = score
 
         # collision check (head-on)
         if pygame.sprite.spritecollide(player, vehicle_group, True):
@@ -185,7 +249,8 @@ while running:
 
     # display the score
     font = pygame.font.Font(pygame.font.get_default_font(), 16)
-    text = font.render("Score: " + str(score), True, white)
+    score_color = (255, 255, 255)  # fixed white color
+    text = font.render("Score: " + str(score), True, score_color)
     text_rect = text.get_rect()
     text_rect.center = (50, 450)
     screen.blit(text, text_rect)
@@ -202,7 +267,7 @@ while running:
 
     pygame.display.update()
 
-    #check if player wants to play again
+    # check if player wants to play again
     while gameover:
 
         clock.tick(fps)
