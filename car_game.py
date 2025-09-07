@@ -113,6 +113,17 @@ running = True
 while running:
     choice = main_menu(screen)
 
+    if choice == "start game":
+        # your normal game loop
+        pass
+    elif choice == "high score":
+        high_score_screen(screen)
+    elif choice == "difficulty":
+        difficulty_screen(screen)
+    elif choice == "instructions":
+        instructions_screen(screen)
+    elif choice == "exit":
+        running = False
     clock.tick(fps)
 
     # Update environment every frame - Mortti X
