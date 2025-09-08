@@ -6,7 +6,7 @@ from pygame.locals import *
 import random
 from environment import EnvironmentManager, lerp_color, get_random_car
 from menu import save_high_score  # save high score to disk (menu provides this)
-
+from sound import SoundManager
 pygame.init()
 
 # create the window
@@ -33,6 +33,7 @@ red = (255, 0, 0)
 white = (255, 255, 255)
 yellow = (255, 232, 0)
 
+
 # game settings
 gameover = False
 speed = 2
@@ -48,6 +49,8 @@ road = (100, 0, 300, height)
 left_edge_marker = (95, 0, marker_width, height)
 right_edge_marker = (395, 0, marker_width, height)
 
+sound = SoundManager()
+sound.play_music()
 # x coordinates of lanes
 left_lane = 150
 center_lane = 250
@@ -167,6 +170,8 @@ def run_game(difficulty="normal"):
                     # instant collision check (sideswipe)
                     for vehicle in vehicle_group:
                         if pygame.sprite.collide_rect(player, vehicle):
+                            sound.stop_music()
+                            sound.play("crash")
                             gameover = True
                             if event.key == K_LEFT:
                                 player.rect.left = vehicle.rect.right
@@ -190,6 +195,7 @@ def run_game(difficulty="normal"):
 
             else:  # game over
                 if event.type == KEYDOWN:
+                    sound.play_music()
                     if event.key == K_y:  # restart
                         try:
                             save_high_score(score)
@@ -265,6 +271,8 @@ def run_game(difficulty="normal"):
 
             # collision check
             if pygame.sprite.spritecollide(player, vehicle_group, True):
+                sound.stop_music()
+                sound.play("crash")
                 gameover = True
                 crash_rect.center = [player.rect.center[0], player.rect.top]
 
