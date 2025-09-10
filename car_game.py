@@ -129,11 +129,11 @@ def run_game(difficulty="normal"):
 
     # adjust speed based on difficulty
     if difficulty == "easy":
-        speed = 1
-    elif difficulty == "hard":
         speed = 3
+    elif difficulty == "hard":
+        speed = 7
     else:
-        speed = 2
+        speed = 5
 
     clock = pygame.time.Clock()
     fps = 120
